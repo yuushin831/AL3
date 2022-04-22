@@ -51,12 +51,17 @@ class GameScene {
 	/// <summary>
 	/// ゲームシーン用
 	/// </summary>
-	uint32_t textureHandle_ = 0;
-	Model* model_ = nullptr;
-	Sprite* sprite_ = nullptr;
-	WorldTransform worldTransform_;
+	uint32_t textureHandleBG_ = 0;
+	uint32_t textureHandleStage_ = 0;
+	uint32_t textureHandleplayer_ = 0;
+	Model* modelStage_ = nullptr;
+	Model* modelplayer_ = nullptr;
+	Sprite* spriteBG_ = nullptr;
+	WorldTransform worldTransformStage_;
+	WorldTransform worldTransformplayer_;
 	ViewProjection viewProjection_;
-	uint32_t soundDataHandle_ = 0;
-	uint32_t voiceHandle_ = 0;
-	uint32_t value_ = 0;
+	//uint32_t soundDataHandle_ = 0;
+	//uint32_t voiceHandle_ = 0;
+	//uint32_t value_ = 0;
+	void playerUpdate();
 };
