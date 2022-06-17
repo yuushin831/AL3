@@ -16,7 +16,9 @@ GameScene::~GameScene()
 	delete modelplayer_;
 	delete modelBeam_;
 	delete modelEnemy_;
-
+	delete spriteTitle_;
+	delete spriteEnter_;
+	delete spriteOver_;
 }
 //初期化
 void GameScene::Initialize() {
@@ -29,7 +31,7 @@ void GameScene::Initialize() {
 	textureHandleBeam_ = TextureManager::Load("beam.png");
 	textureHandleEnemy_ = TextureManager::Load("enemy.png");
 
-	textureHandleStage_ = TextureManager::Load("stage.jpg");
+	textureHandleStage_ = TextureManager::Load("stage2.jpg");
 	textureHandleplayer_ = TextureManager::Load("player.png");
 	spriteBG_ = Sprite::Create(textureHandleBG_, {0, 0});
 	modelStage_ = Model::Create();
@@ -46,19 +48,41 @@ void GameScene::Initialize() {
 	viewProjection_.target = {0, 1, 0};
 	viewProjection_.Initialize();
 
-	worldTransformStage_.translation_ = {0, -1.5f, 0};
-	worldTransformStage_.scale_ = {4.5f, 1, 40};
-	worldTransformStage_.Initialize();
+	for (int k = 0; k < 20; k++) {
 
-	worldTransformBeam_.scale_ = {0.3f, 0.3f, 0.3f};
-	worldTransformBeam_.Initialize();
+		worldTransformStage_[k].translation_ = {0, -1.5f, 2.0f * k - 5};
+		worldTransformStage_[k].scale_ = {4.5f, 1, 1};
+		worldTransformStage_[k].Initialize();
+	}
+	for (int j = 0; j < 10; j++) {
 
-	worldTransformEnemy_.scale_ = {0.5f, 0.5f, 0.5f};
-	worldTransformEnemy_.translation_ = {0, 0, 35};
-	worldTransformEnemy_.Initialize();
+		worldTransformBeam_[j].scale_ = {0.3f, 0.3f, 0.3f};
+		worldTransformBeam_[j].Initialize();
+	}
+	for (int i = 0; i < 10; i++) {
 
+		worldTransformEnemy_[i].scale_ = {0.5f, 0.5f, 0.5f};
+		worldTransformEnemy_[i].translation_ = {0, 0, 35};
+		worldTransformEnemy_[i].Initialize();
+	}
+	textureHandleTitle_ = TextureManager::Load("title.png");
+	spriteTitle_ = Sprite::Create(textureHandleTitle_, {0, 0});
 
+	textureHandleEnter_ = TextureManager::Load("enter.png");
+	spriteEnter_ = Sprite::Create(textureHandleEnter_, {400, 500});
+
+	textureHandleOver_ = TextureManager::Load("gameover.png");
+	spriteOver_ = Sprite::Create(textureHandleOver_, {0, 0});
 	srand((unsigned int)time(NULL));
+
+	soundDetaHandleTitleBGM_ = audio_->LoadWave("Audio/Ring05.wav");
+	soundDetaHandleGamePlayBGM_ = audio_->LoadWave("Audio/Ring08.wav");
+	soundDetaHandleGameOverBGM_ = audio_->LoadWave("Audio/Ring09.wav");
+	soundDetaHandleEnemyHitSE_ = audio_->LoadWave("Audio/chord.wav");
+	soundDetaHandlePlayerHitSE_ = audio_->LoadWave("Audio/tada.wav");
+
+	voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleTitleBGM_, true);
+
 
 	//soundDataHandle_ = audio_->LoadWave("se_sad03.wav");
 	//audio_->PlayWave(soundDataHandle_);
@@ -68,29 +92,26 @@ void GameScene::Initialize() {
 //更新
 void GameScene::Update() 
 { 
-	//XMFLOAT2 position = sprite_->GetPosition();
-
-	//position.x += 2.0f;
-	//position.y += 1.0f;
-	playerUpdate();
-	BeamUpdate();
-	EnemyUpdate();
-
-	Collision();
-	//sprite_->SetPosition(position);
-
-	if(input_->TriggerKey(DIK_SPACE)) 
+	gameTimer_ += 1;
+	switch (sceneMode_) 
 	{
-		//audio_->StopWave(voiceHandle_);
+	case 0:
+		GamePlayUpdate();
+		break;
+	case 1:
+		TitleUpdate();
+		break;
+	case 2:
+		OverUpdate();
+		break;
 	}
-	//debugText_->Print("kaizokuou ni orw ha naru", 50, 50, 1.0f);
-	debugText_->SetPos(50, 70);
-	//debugText_->Printf("year:%d", value_);
-	//value_++;
+	
 
-	//std::string strDebug = std::string("value!!");
-	//std::to_string(value_);
-	//debugText_->Print(strDebug, 50, 50, 1.0f);
+	
+
+
+	
+	
 }
 //表示
 void GameScene::Draw() {
@@ -101,11 +122,23 @@ void GameScene::Draw() {
 #pragma region 背景スプライト描画
 	// 背景スプライト描画前処理
 	Sprite::PreDraw(commandList);
+	switch (sceneMode_) 
+	{
+	case 0:
+		GameplayDraw2DBack();
+		break;
+	case 2:
+		GameplayDraw2DBack();
 
+		break;
+	}
+	
+
+	
 	/// <summary>
 	/// ここに背景スプライトの描画処理を追加できる
 	/// </summary>
-	spriteBG_->Draw();
+	
 	// スプライト描画後処理
 	Sprite::PostDraw();
 	// 深度バッファクリア
@@ -115,30 +148,23 @@ void GameScene::Draw() {
 #pragma region 3Dオブジェクト描画
 	// 3Dオブジェクト描画前処理
 	Model::PreDraw(commandList);
+	switch (sceneMode_) {
+	case 0:
+		GemePlayDraw3D();
+		break;
+	case 2:
+		GemePlayDraw3D();
+
+		break;
+	}
+	
 
 	/// <summary>
 	/// ここに3Dオブジェクトの描画処理を追加できる
 	/// </summary>
 	//model_->Draw(worldTransform_, viewProjection_, textureHandle_);
-	modelStage_->Draw(worldTransformStage_, viewProjection_, textureHandleStage_);
 	
-	modelplayer_->Draw(worldTransformplayer_, viewProjection_, textureHandleplayer_);
-	if (EnemyFlag) {
 
-		modelEnemy_->Draw(worldTransformEnemy_, viewProjection_, textureHandleEnemy_);
-	}
-	if (BeamFlag==1) 
-	{
-		modelBeam_->Draw(worldTransformBeam_, viewProjection_, textureHandleBeam_);
-	}
-
-	char str[100];
-	sprintf_s(str, "SCORE:%d", gamescore_);
-	debugText_->Print(str, 200, 10, 2);
-
-	char str2[100];
-	sprintf_s(str2, "LIFE:%d", playerLife_);
-	debugText_->Print(str2, 400, 10, 2);
 
 
 	// 3Dオブジェクト描画後処理
@@ -148,7 +174,19 @@ void GameScene::Draw() {
 #pragma region 前景スプライト描画
 	// 前景スプライト描画前処理
 	Sprite::PreDraw(commandList);
-
+	switch (sceneMode_) {
+	case 0:
+		GemePlayDraw2DNear();
+		break;
+	case 1:
+		TitleDraw2DNear();
+		break;
+	case 2:
+		GemePlayDraw2DNear();
+		OverDraw2DNear();
+		break;
+	}
+	
 	/// <summary>
 	/// ここに前景スプライトの描画処理を追加できる
 	/// </summary>
@@ -194,8 +232,9 @@ void GameScene::BeamUpdate()
 { 
 	BeamBorn();
 	BeamMove();
-	worldTransformBeam_.UpdateMatrix();
-	
+	for (int j = 0; j < 10; j++) {
+		worldTransformBeam_[j].UpdateMatrix();
+	}
 	
 
 
@@ -203,32 +242,46 @@ void GameScene::BeamUpdate()
 
 void GameScene::BeamMove() 
 { 
-	if (BeamFlag == 1) {
+	for (int j = 0; j < 10; j++) {
+		if (BeamFlag[j] == 1) {
 
-		worldTransformBeam_.translation_.z += 1;
-		worldTransformBeam_.rotation_.x += 0.1f;
-		
-	
-	}
-	if (worldTransformBeam_.translation_.z >= 40) {
-		BeamFlag = 0;
+			worldTransformBeam_[j].translation_.z += 1;
+			worldTransformBeam_[j].rotation_.x += 0.1f;
+		}
+		if (worldTransformBeam_[j].translation_.z >= 40) {
+			BeamFlag[j] = 0;
+		}
 	}
 }
 
 void GameScene::BeamBorn() 
 { 
-	if (BeamFlag == 0) 
+	if (beamTimer_ == 0) 
 	{
 
-		if (input_->PushKey(DIK_SPACE)) {
+		for (int j = 0; j < 10; j++) 
+		{
+			if (BeamFlag[j] == 0) 
+			{
 
-			worldTransformBeam_.translation_.x = worldTransformplayer_.translation_.x;
-			worldTransformBeam_.translation_.y = worldTransformplayer_.translation_.y;
-			worldTransformBeam_.translation_.z = worldTransformplayer_.translation_.z;
-			BeamFlag = 1;
+				if (input_->PushKey(DIK_SPACE)) 
+				{
+
+					worldTransformBeam_[j].translation_.x = worldTransformplayer_.translation_.x;
+					worldTransformBeam_[j].translation_.y = worldTransformplayer_.translation_.y;
+					worldTransformBeam_[j].translation_.z = worldTransformplayer_.translation_.z;
+					BeamFlag[j] = 1;
+					beamTimer_=1;
+					break;
+				}
+			}
+		}
+	} else {
+		beamTimer_++;
+		if (beamTimer_ > 10) {
+			beamTimer_ = 0;
 		}
 	}
-	
 
 }
 
@@ -237,57 +290,62 @@ void GameScene::EnemyUpdate()
 { 
 	EnemyMove();
 	EnemyBorn(); 
-	worldTransformEnemy_.UpdateMatrix();
-	
+	EnemyJump();
+	for (int i = 0; i < 10; i++) {
+
+		worldTransformEnemy_[i].UpdateMatrix();
+	}
 }
 
 void GameScene::EnemyMove() 
 { 
-	if (EnemyFlag == 1) 
+	for (int i = 0; i < 10; i++) 
 	{
-		
-		
+		if (EnemyFlag[i] == 1) {
+
+			 worldTransformEnemy_[i].translation_.x += Enemyspeed[i];
+			worldTransformEnemy_[i].rotation_.x -= 0.1f;
 			
+			worldTransformEnemy_[i].translation_.z -= gameTimer_ / 10000.0f; // 0.5f;
+			
+			if (worldTransformEnemy_[i].translation_.z < -5) {
+				EnemyFlag[i] = 0;
+			}
 
-
-		//worldTransformEnemy_.translation_.x += Enemyspeed;
-		//if (worldTransformEnemy_.translation_.x >= 4) {
-		//	// worldTransformEnemy_.translation_.x -=
-		//	Enemyspeed -= 0.1f;
-		//}
-		//if (worldTransformEnemy_.translation_.x <= -4) {
-		//	// worldTransformEnemy_.translation_.x -=
-		//	Enemyspeed += 0.1f;
-		//}
-		worldTransformEnemy_.rotation_.x -= 0.1f;
-		worldTransformEnemy_.translation_.z -= 0.1f;
-		if (worldTransformEnemy_.translation_.z<-5)
-		{
-			EnemyFlag = 0;
+			if (worldTransformEnemy_[i].translation_.x<=-4) {
+				Enemyspeed[i] = 0.2f;
+			}
+			if (worldTransformEnemy_[i].translation_.x >= 4) {
+				Enemyspeed[i] = -0.2f;
+			}
 		}
-		
-
 	}
-
 }
 
 void GameScene::EnemyBorn() 
 {
+	if (rand() % 10 == 0) {
 
-	if (EnemyFlag==0) 
-	{
-		EnemyFlag = 1;
-		worldTransformEnemy_.translation_.z = 40;
+		for (int i = 0; i < 10; i++) {
+			if (EnemyFlag[i] == 0) {
+				EnemyFlag[i] = 1;
+				worldTransformEnemy_[i].translation_.z = 40;
+
+				int x = rand() % 80;
+				float x2 = (float)x / 10 - 4;
+				worldTransformEnemy_[i].translation_.x = x2;
 
 
-			int x = rand() % 80;
-		float x2 = (float)x / 10 - 4;
-		worldTransformEnemy_.translation_.x = x2;
-
-
+				if (rand() % 2 == 0) {
+					Enemyspeed[i] = 0.2f;
+				} else {
+					Enemyspeed[i] = -0.2f;
+				}
+				break;
+			}
+		}
 	}
-
-
+	
 	
 
 
@@ -304,30 +362,185 @@ void GameScene::Collision() {
 
 void GameScene::Collisionplayerenemy() 
 {
+	for (int i = 0; i < 10; i++) {
+		if (EnemyFlag[i] == 1) {
 
-	if (EnemyFlag == 1) {
+			float dx =
+			  abs(worldTransformplayer_.translation_.x - worldTransformEnemy_[i].translation_.x);
+			float dz =
+			  abs(worldTransformplayer_.translation_.z - worldTransformEnemy_[i].translation_.z);
 
-		float dx = abs(worldTransformplayer_.translation_.x - worldTransformEnemy_.translation_.x);
-		float dz = abs(worldTransformplayer_.translation_.z - worldTransformEnemy_.translation_.z);
-		
-		if (dx < 1 && dz < 1) 
+			if (dx < 1 && dz < 1) {
+				EnemyFlag[i] = 0;
+				playerLife_ -= 1;
+
+				audio_->PlayWave(soundDetaHandlePlayerHitSE_);
+			}
+		}
+	}
+
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 10; j++) {
+			if (EnemyFlag[i] == 1 && BeamFlag[j] == 1) {
+				float bx = abs(
+				  worldTransformBeam_[j].translation_.x - worldTransformEnemy_[i].translation_.x);
+				float bz = abs(
+				  worldTransformBeam_[j].translation_.z - worldTransformEnemy_[i].translation_.z);
+
+				if (bx < 1 && bz < 1) {
+					EnemyFlag[i] = 2;
+					enemyJumpSpeed_[i] = 1;
+					BeamFlag[j] = 0;
+					gamescore_ += 10;
+					audio_->PlayWave(soundDetaHandleEnemyHitSE_);
+				}
+			}
+		}
+	}
+
+
+}
+
+void GameScene::GamePlayUpdate() {
+	playerUpdate();
+	BeamUpdate();
+	EnemyUpdate();
+	StageUpdate();
+	Collision();
+
+
+	if (playerLife_ == 0) {
+		sceneMode_ = 2;
+		audio_->StopWave(voiceHandleBGM_);
+		voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleGameOverBGM_, true);
+	}
+}
+
+void GameScene::GemePlayDraw3D() {
+	for (int k = 0; k < 20; k++) {
+
+		modelStage_->Draw(worldTransformStage_[k], viewProjection_, textureHandleStage_);
+	}
+	modelplayer_->Draw(worldTransformplayer_, viewProjection_, textureHandleplayer_);
+
+	for (int j = 0; j < 10; j++) {
+		if (BeamFlag[j] == 1) {
+			modelBeam_->Draw(worldTransformBeam_[j], viewProjection_, textureHandleBeam_);
+		}
+	}
+
+		for (int i = 0; i < 10; i++) {
+			if (EnemyFlag[i]!=0) {
+
+				modelEnemy_->Draw(worldTransformEnemy_[i], viewProjection_, textureHandleEnemy_);
+			}
+			
+		}
+	
+}
+
+void GameScene::GameplayDraw2DBack() {
+
+	spriteBG_->Draw(); }
+
+void GameScene::GemePlayDraw2DNear() {
+	char str[100];
+	sprintf_s(str, "SCORE:%d", gamescore_);
+	debugText_->Print(str, 200, 10, 2);
+
+	char str2[100];
+	sprintf_s(str2, "LIFE:%d", playerLife_);
+	debugText_->Print(str2, 400, 10, 2);
+}
+
+void GameScene::TitleUpdate() { 
+	if (input_->TriggerKey(DIK_RETURN)) {
+		sceneMode_ = 0;
+		GamePlayStart();
+
+		audio_->StopWave(voiceHandleBGM_);
+		voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleGamePlayBGM_, true);
+	}
+}
+
+void GameScene::TitleDraw2DNear() { 
+	spriteTitle_->Draw();
+	if (gameTimer_%40>=20) 
+	{
+		spriteEnter_->Draw();
+	}
+	
+}
+
+void GameScene::OverDraw2DNear() 
+{ 
+	spriteOver_->Draw();
+	if (gameTimer_ % 40 >= 20) 
+	{
+		spriteEnter_->Draw();
+	}
+
+
+}
+
+void GameScene::OverUpdate() 
+{ 
+	
+	if (input_->TriggerKey(DIK_RETURN)) {
+		sceneMode_ = 1;
+		audio_->StopWave(voiceHandleBGM_);
+		voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleTitleBGM_, true);
+	}
+}
+
+void GameScene::GamePlayStart() 
+{
+	for (int j = 0; j < 10; j++) {
+		for (int i = 0; i < 10; i++) {
+			EnemyFlag[i] = 0;
+			gamescore_ = 0;
+			playerLife_ = 3;
+			BeamFlag[j] = 0;
+			gameTimer_ = 0;
+			// sceneMode_ = 1;
+		}
+	}
+}
+
+void GameScene::StageUpdate() 
+{ 
+	for (int k = 0; k < 20;k++) 
+	{
+		worldTransformStage_[k].translation_.z -= 0.1f;
+		if (worldTransformStage_[k].translation_.z< -5) {
+			worldTransformStage_[k].translation_.z += 40;
+		}
+
+		worldTransformStage_[k].UpdateMatrix();
+	}
+}
+
+void GameScene::EnemyJump() 
+{ 
+	for (int i=0;i<10;i++) 
+	{
+		if (EnemyFlag[i]==2) 
 		{
-			EnemyFlag = 0;
-			playerLife_ -= 1;
-		}
-		
-	}
+			worldTransformEnemy_[i].translation_.y += enemyJumpSpeed_[i];
 
-	if (EnemyFlag==1&&BeamFlag==1) {
-		float bx = abs(worldTransformBeam_.translation_.x - worldTransformEnemy_.translation_.x);
-		float bz = abs(worldTransformBeam_.translation_.z - worldTransformEnemy_.translation_.z);
+			enemyJumpSpeed_[i] -= 0.1f;
 
-		if (bx<1&&bz<1) {
-			EnemyFlag = 0;
-			BeamFlag = 0;
-			gamescore_ += 10;
+			worldTransformEnemy_[i].translation_.x += Enemyspeed[i] * 2;
+
+			if (worldTransformEnemy_[i].translation_.y<-3) {
+				EnemyFlag[i] = 0;
+				worldTransformEnemy_[1].translation_.y = 0;
+			}
+
 		}
 	}
+
+
 
 
 }
