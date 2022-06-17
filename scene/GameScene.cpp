@@ -9,8 +9,7 @@ using namespace DirectX;
 GameScene::GameScene() {}
 
 //デストラクタ
-GameScene::~GameScene() 
-{ 
+GameScene::~GameScene() {
 	delete spriteBG_;
 	delete modelStage_;
 	delete modelplayer_;
@@ -19,6 +18,11 @@ GameScene::~GameScene()
 	delete spriteTitle_;
 	delete spriteEnter_;
 	delete spriteOver_;
+	for (int i = 0; i < 5; i++) {
+
+		delete spriteNumber_[i];
+	}
+	delete spriteScore_;
 }
 //初期化
 void GameScene::Initialize() {
@@ -83,7 +87,18 @@ void GameScene::Initialize() {
 
 	voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleTitleBGM_, true);
 
+	texttureHandleNumber_ = TextureManager::Load("number.png");
+	for (int i=0;i<5;i++) {
+		spriteNumber_[i] = Sprite::Create(texttureHandleNumber_, {300.0f + i * 26, 0});
+	}
 
+	texttureHandleScore_ = TextureManager::Load("score.png");
+	spriteScore_ = Sprite::Create(texttureHandleScore_, {150.0f, 0.0f});
+
+	spriteNumberPlayer1_ = Sprite::Create(textureHandleplayer_, {900, 0});
+	spriteNumberPlayer2_ = Sprite::Create(textureHandleplayer_, {950, 0});
+	spriteNumberPlayer3_ = Sprite::Create(textureHandleplayer_, {1000, 0});
+	
 	//soundDataHandle_ = audio_->LoadWave("se_sad03.wav");
 	//audio_->PlayWave(soundDataHandle_);
 	//voiceHandle_ = audio_->PlayWave(soundDataHandle_,true);
@@ -306,7 +321,7 @@ void GameScene::EnemyMove()
 			 worldTransformEnemy_[i].translation_.x += Enemyspeed[i];
 			worldTransformEnemy_[i].rotation_.x -= 0.1f;
 			
-			worldTransformEnemy_[i].translation_.z -= gameTimer_ / 10000.0f; // 0.5f;
+			worldTransformEnemy_[i].translation_.z -=gameTimer_ / 10000.0f;
 			
 			if (worldTransformEnemy_[i].translation_.z < -5) {
 				EnemyFlag[i] = 0;
@@ -362,6 +377,9 @@ void GameScene::Collision() {
 
 void GameScene::Collisionplayerenemy() 
 {
+	if (playerTimer_ >= 0) {
+		playerTimer_--;
+	}
 	for (int i = 0; i < 10; i++) {
 		if (EnemyFlag[i] == 1) {
 
@@ -373,7 +391,7 @@ void GameScene::Collisionplayerenemy()
 			if (dx < 1 && dz < 1) {
 				EnemyFlag[i] = 0;
 				playerLife_ -= 1;
-
+				playerTimer_ = 60;
 				audio_->PlayWave(soundDetaHandlePlayerHitSE_);
 			}
 		}
@@ -409,7 +427,7 @@ void GameScene::GamePlayUpdate() {
 	Collision();
 
 
-	if (playerLife_ == 0) {
+	if (playerLife_ <= 0) {
 		sceneMode_ = 2;
 		audio_->StopWave(voiceHandleBGM_);
 		voiceHandleBGM_ = audio_->PlayWave(soundDetaHandleGameOverBGM_, true);
@@ -421,8 +439,11 @@ void GameScene::GemePlayDraw3D() {
 
 		modelStage_->Draw(worldTransformStage_[k], viewProjection_, textureHandleStage_);
 	}
-	modelplayer_->Draw(worldTransformplayer_, viewProjection_, textureHandleplayer_);
+	
+	if (playerTimer_ % 4 < 2) {
 
+		modelplayer_->Draw(worldTransformplayer_, viewProjection_, textureHandleplayer_);
+	}
 	for (int j = 0; j < 10; j++) {
 		if (BeamFlag[j] == 1) {
 			modelBeam_->Draw(worldTransformBeam_[j], viewProjection_, textureHandleBeam_);
@@ -444,13 +465,15 @@ void GameScene::GameplayDraw2DBack() {
 	spriteBG_->Draw(); }
 
 void GameScene::GemePlayDraw2DNear() {
+	DrawScore();
+	spriteScore_->Draw();
 	char str[100];
 	sprintf_s(str, "SCORE:%d", gamescore_);
-	debugText_->Print(str, 200, 10, 2);
+	//debugText_->Print(str, 200, 10, 2);
 
 	char str2[100];
 	sprintf_s(str2, "LIFE:%d", playerLife_);
-	debugText_->Print(str2, 400, 10, 2);
+	//debugText_->Print(str2, 400, 10, 2);
 }
 
 void GameScene::TitleUpdate() { 
@@ -505,6 +528,7 @@ void GameScene::GamePlayStart()
 			// sceneMode_ = 1;
 		}
 	}
+	playerTimer_ = 0;
 }
 
 void GameScene::StageUpdate() 
@@ -541,6 +565,40 @@ void GameScene::EnemyJump()
 	}
 
 
+
+
+}
+
+void GameScene::DrawScore() 
+{
+	char eachNumber[5] = {};
+	int number = gamescore_;
+
+	int keta = 10000;
+	for (int i=0;i<5;i++) {
+		eachNumber[i] = number / keta;
+		number = number % keta;
+		keta = keta / 10;
+	}
+	for (int i = 0; i < 5; i++) {
+		spriteNumber_[i]->SetSize({32, 64});
+		spriteNumber_[i]->SetTextureRect({32.0f * eachNumber[i],0}, {32, 64});
+		spriteNumber_[i]->Draw();
+	}
+	if (playerLife_ >= 3) {
+		spriteNumberPlayer1_->SetSize({40, 40});
+		spriteNumberPlayer1_->Draw();
+	}
+
+	if (playerLife_ >= 2) {
+		spriteNumberPlayer2_->SetSize({40, 40});
+		spriteNumberPlayer2_->Draw();
+	}
+
+	if (playerLife_ >= 1) {
+		spriteNumberPlayer3_->SetSize({40, 40});
+		spriteNumberPlayer3_->Draw();
+	}
 
 
 }

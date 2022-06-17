@@ -126,5 +126,16 @@ class GameScene {
 	float enemyJumpSpeed_[10] = {};
 	void EnemyJump();
 
-	
+	void DrawScore();
+	uint32_t texttureHandleNumber_ = 0;
+	Sprite* spriteNumber_[5] = {};
+
+	uint32_t texttureHandleScore_ = 0;
+	Sprite* spriteScore_ = 0;
+
+	Sprite* spriteNumberPlayer1_ = 0;
+	Sprite* spriteNumberPlayer2_ = 0;
+	Sprite* spriteNumberPlayer3_ = 0;
+
+	int playerTimer_ = 0;
 };
